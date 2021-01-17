@@ -3,8 +3,8 @@ File name     : e_util_dependency_util.e
 Title         : Dependency Util
 Project       : Utilities
 Created       : 2020
-Description   : Static analysis of the environment, finding dependencies between
-              : elements (directories, modules, types)
+Description   : Static analysis of the environment, finding dependencies
+              : between elements (directories, modules, types)
               :
               : See details below
               :
@@ -69,8 +69,8 @@ Print dependencies:
                                        all dependencies.
                                        when FALSE, prints count of dependencies
   first_module_name : string         - start the analysis from this module.
-                                       If empty string - with first loaded/compiled
-                                       module
+                                       If empty string - with first 
+                                       loaded/compiled module
   last_module_name  : string         - the last module to analyze.
                                        If empty string - analyze until the last 
                                        loaded/compiled module
@@ -80,11 +80,13 @@ Print dependencies:
   Usage example:
   -------------
   
-  dependencies_query::print_all_dependencies_by_pattern(module, "soc_env", module, "ip_*", TRUE)
+  dependencies_query::print_all_dependencies_by_pattern(module, "soc_env",
+    module, "ip_*", TRUE)
 
       print all modules start with ip_*, that soc_env.e depends on
   
-  dependencies_query::print_all_dependencies_by_pattern(module, "soc_env", type, "*", TRUE)
+  dependencies_query::print_all_dependencies_by_pattern(module, "soc_env", 
+         type, "*", TRUE)
 
 
     print all the types that soc_env.e depends on
@@ -115,7 +117,8 @@ Print dependencies:
     first_module_name : string, start the analysis from this module.
                         If empty string - with first loaded/compiled module
     last_module_name  : string, the last module to analyze.
-                        If empty string - analyze until the last loaded/compiled module
+                        If empty string - analyze until the last 
+                        loaded/compiled module
   
   
   
@@ -123,7 +126,8 @@ Print dependencies:
   -------------
   
    var checker_deps :=
-      dependencies_query::find_module_dependencies_recursively("checker", "", "");
+      dependencies_query::find_module_dependencies_recursively("checker",
+              "", "");
    for each (mod_dep) in checker_deps {
      out ( mod_dep.get_dependent().get_name(), " depends on ");
      for each in mod_dep.get_all_deps() {
@@ -153,10 +157,12 @@ Query #2: get all dependencies:
 
   Description:
   -----------
-  Looks for all the dependencies between <dependent_pattern> and <dependee_pattern>.
+  Looks for all the dependencies between <dependent_pattern> and 
+  <dependee_pattern>.
   
   Return a list of dependency_info. 
-  Each dependency_info contains information of all dependencies between two elements.
+  Each dependency_info contains information of all dependencies between
+  two elements.
   
     dependent_kind    : element_kind   - one of - directory, module, type
     dependent_pattern : string         - can contain wildcards  
@@ -453,12 +459,12 @@ struct dependencies_query like base_struct {
          };
     };
     
-    ctor(main_dependents: list of dependency_element, 
-         main_dependees: list of dependency_element,
-         first_module_name: string, last_module_name: string) is {
+    ctor(main_dependents_i : list of dependency_element, 
+         main_dependees_i  : list of dependency_element,
+         first_module_name : string, last_module_name: string) is {
         
-        me.main_dependents = main_dependents;
-        me.main_dependees = main_dependees;  
+        me.main_dependents = main_dependents_i;
+        me.main_dependees = main_dependees_i;  
         
         if not started_with_interesting() {
             assign_interesting_modules( first_module_name, last_module_name);
@@ -515,8 +521,9 @@ struct dependencies_query like base_struct {
     add_direct_dependency_on_type(dependent: rf_structural_element,
                                   dependee: rf_type, source_line_num: int,
                                   source_module: rf_module, check: bool) is {
-        for each in dependee.get_explicit_entities() do {
-            add_direct_dependency(dependent, it, source_line_num, source_module, check);
+        for each (ee) in dependee.get_explicit_entities() do {
+            add_direct_dependency(dependent, ee, source_line_num,
+                                  source_module, check);
         };
     };
         
@@ -535,23 +542,26 @@ struct dependencies_query like base_struct {
         var all_dependees: list of rf_structural_element;
         var module_elements : module_elements;
         
-        for each in main_dependents do {
-            curr_main_dependent = it;
+        for each (mdt) in main_dependents do {
+            curr_main_dependent = mdt;
             curr_dependents =
               curr_main_dependent.get_all_contained_elements(TRUE, FALSE);
-            for each in main_dependees do {
-                curr_main_dependee = it;
+            for each (mde) in main_dependees do {
+                curr_main_dependee = mde;
                 if curr_main_dependent != curr_main_dependee then {
                                         
                     if curr_main_dependee is a rf_module {
                         module_elements = 
-                          get_module_elements(curr_main_dependee.as_a(rf_module).get_name());
+                          get_module_elements(curr_main_dependee.
+                                              as_a(rf_module).get_name());
                         if module_elements == NULL {
                             module_elements = new with {
                                 .module_name = 
-                                  curr_main_dependee.as_a(rf_module).get_name()};
+                                  curr_main_dependee.as_a(rf_module).
+                                  get_name()};
                             module_elements.elements = 
-                              curr_main_dependee.get_all_contained_elements(FALSE, TRUE);
+                              curr_main_dependee.
+                              get_all_contained_elements(FALSE, TRUE);
                             add_module_elements(module_elements);
                         };
                         curr_dependees = module_elements.elements;
@@ -631,10 +641,12 @@ struct dependencies_query like base_struct {
     
     // find_all_dependencies_by_pattern() 
     //
-    //  Looks for all the dependencies between <dependent_pattern> and <dependee_pattern>.
+    //  Looks for all the dependencies between <dependent_pattern> and
+    // <dependee_pattern>.
     //
     // Return a list of dependency_info. 
-    // Each dependency_info contains information of all dependencies between two elements.
+    // Each dependency_info contains information of all dependencies
+    // between two elements.
     //
     static find_all_dependencies_by_pattern(dependent_kind: element_kind,
                                             dependent_pattern: string,
@@ -642,24 +654,29 @@ struct dependencies_query like base_struct {
                                             dependee_pattern: string, 
                                             first_module_name: string = "",
                                             last_module_name: string = ""): 
-                                                               list of dependency_info is {
+                                                list of dependency_info is {
         var main_dependents: list of dependency_element;
-        add_elements_by_kind_and_pattern_to_list(dependent_kind, dependent_pattern,
+        add_elements_by_kind_and_pattern_to_list(dependent_kind, 
+                                                 dependent_pattern,
                                                  main_dependents);
 
         var main_dependees: list of dependency_element;
-        add_elements_by_kind_and_pattern_to_list(dependee_kind, dependee_pattern,
+        add_elements_by_kind_and_pattern_to_list(dependee_kind,
+                                                 dependee_pattern,
                                                  main_dependees);
 
         var query: dependencies_query = new;
-        query.ctor(main_dependents, main_dependees, first_module_name, last_module_name);
+        query.ctor(main_dependents, main_dependees, first_module_name,
+                   last_module_name);
         return query.execute();
     };
     
 
-    // Return the list of modules within the first_module_name - last_module_name
+    // Return the list of modules within the 
+    // first_module_name - last_module_name
     static get_interesting_modules(first_module_name: string = "",
-                                   last_module_name: string = "") : list of rf_module is {
+                                   last_module_name: string = "") : 
+                                         list of rf_module is {
         var all_modules  : list of rf_module = rf_manager.get_user_modules();
         var first_module : rf_module;
         var last_module  : rf_module = all_modules.top();
@@ -734,7 +751,8 @@ struct dependencies_query like base_struct {
         } else if dependent_module_pattern ~ "/\*/" then {
             for each (module) in all_modules do {
                 if (module.get_name() ~ dependent_module_pattern) or
-                  (append(module.get_name(), ".e") ~ dependent_module_pattern) then {
+                  (append(module.get_name(), ".e") ~ dependent_module_pattern)
+                                    then {
                     result.add(new with {
                         it.the_module = module;
                     });
@@ -765,7 +783,8 @@ struct dependencies_query like base_struct {
         };
     };
 
-    static print_dependencies(deps: list of dependency_info, detailed: bool) is {
+    static print_dependencies(deps: list of dependency_info, 
+                              detailed: bool) is {
         if deps.is_empty() then {
             out("No dependencies were found");
             return;
@@ -775,21 +794,22 @@ struct dependencies_query like base_struct {
             direct_deps = deps.apply(it.get_direct_dependencies());
         };
         
+        
         var printed1: list of string = detailed ?
             direct_deps.apply(it.dependent.get_printed_lines()[0]) :
             deps.apply(it.main_dependent.get_printed_lines()[0]);
         var width1: int = str_len(printed1.max(str_len(it)));
-        for each in printed1 do {
-            printed1[index] = str_pad(it, width1);
+        for each (p1) in printed1 do {
+            printed1[index] = str_pad(p1, width1);
         };
         var title1: string = str_pad("Dependent element", width1);
         
         var printed2: list of string = detailed ?
             direct_deps.apply(it.dependee.get_printed_lines()[0]) :
-            deps.apply(it.main_dependent.get_printed_lines()[0]);
+            deps.apply(it.main_dependee.get_printed_lines()[0]);
         var width2: int = str_len(printed2.max(str_len(it)));
-        for each in printed2 do {
-            printed2[index] = str_pad(it, width2);
+        for each (p2) in printed2 do {
+            printed2[index] = str_pad(p2, width2);
         };
         var title2: string = str_pad("Dependee", width2);
         
@@ -827,10 +847,10 @@ struct dependencies_query like base_struct {
 
     // print_all_dependencies_by_pattern()
     //
-    // When 'detailed' is TRUE, print all the dependencies of <dependent_pattern> 
-    // on <dependee_pattern>.
-    // When 'detailed' is FALSE, print the number of dependencies of <dependent_pattern> 
-    // on <dependee_pattern>.
+    // When 'detailed' is TRUE, print all the dependencies of
+    // <dependent_pattern> on <dependee_pattern>.
+    // When 'detailed' is FALSE, print the number of dependencies of
+    // <dependent_pattern> on <dependee_pattern>.
     //
     static print_all_dependencies_by_pattern(dependent_kind: element_kind,
                                              dependent_pattern: string, 
@@ -861,9 +881,11 @@ struct directory_element like base_struct implementing dependency_element {
     };
     
     get_all_contained_elements(include_extensions : bool,
-                               with_entities: bool): list of rf_structural_element is {
+                               with_entities: bool): list of
+                                                  rf_structural_element is {
         for each (module) in rf_manager.get_user_modules() do {
-            if module.get_full_file_name() ~ appendf("/^%s/", full_dir_name) then {
+            if module.get_full_file_name() ~ appendf("/^%s/", 
+                                                     full_dir_name) then {
                 result.add(module.get_all_contained_elements(include_extensions,
                                                              with_entities));
             };
@@ -878,7 +900,8 @@ struct directory_element like base_struct implementing dependency_element {
     get_element_module_name(): string is empty;
     
     get_element_container(): string is {
-        return str_sub(full_dir_name, 0, str_len(full_dir_name)-str_len(get_dir_name()));
+        return str_sub(full_dir_name, 0, 
+                       str_len(full_dir_name)-str_len(get_dir_name()));
     };
     
     get_printed_lines(): list of string is {
@@ -894,7 +917,8 @@ extend rf_structural_element implementing dependency_element {
     
     
     get_all_contained_elements(include_extensions : bool,
-                               with_entities: bool): list of rf_structural_element is {
+                               with_entities: bool): 
+                              list of rf_structural_element is {
                 
         var add_me : bool = FALSE; 
         if include_extensions {
@@ -924,8 +948,9 @@ extend rf_structural_element implementing dependency_element {
             };
         };
                 
-        for each in get_direct_contained_elements() do {
-            result.add(it.get_all_contained_elements(include_extensions, with_entities));
+        for each (dce) in get_direct_contained_elements() do {
+            result.add(dce.get_all_contained_elements(include_extensions,
+                                                      with_entities));
         };
     };
 };
@@ -960,7 +985,8 @@ extend rf_definition_element {
     find_dependencies_for_element(query: dependencies_query, 
                                   dependees: list of rf_structural_element,
                                   queried_element: rf_structural_element) is {
-        for each (ref) in lint_manager.get_all_entity_references_in_context(me) do {
+        for each (ref) in lint_manager.
+                    get_all_entity_references_in_context(me) do {
             var entity: rf_named_entity = ref.get_entity();
             if entity in dependees then {
                 query.add_direct_dependency(queried_element, entity, 
@@ -974,7 +1000,8 @@ extend rf_definition_element {
                       dependees: list of rf_structural_element) is {
         if query.is_interesting_module(me.get_module()) then {
             find_dependencies_for_element(query, dependees, me);
-            get_defined_entity().find_dependencies_for_entity(query, dependees, me, me);
+            get_defined_entity().
+              find_dependencies_for_entity(query, dependees, me, me);
         };
     };
 };
@@ -987,7 +1014,8 @@ struct entity_references_per_module like base_struct {
 };
 
 extend lint_manager {
-    entity_references_per_module_map: list (key: module) of entity_references_per_module;
+    entity_references_per_module_map: list (key: module) 
+                                       of entity_references_per_module;
 };
 
 extend rf_module {
@@ -1006,22 +1034,26 @@ extend rf_module {
         if entity_references_entry == NULL then {
             entity_references_entry = new with {
                 .module = me;
-                .entity_references = lint_manager.get_all_entity_references({}, "", get_name());
+                .entity_references = 
+                  lint_manager.get_all_entity_references({}, "", get_name());
             };
-            lint_manager.entity_references_per_module_map.add(entity_references_entry);
+            lint_manager.
+              entity_references_per_module_map.add(entity_references_entry);
         };
         for each (ref) in entity_references_entry.entity_references do {
             if ref.get_context() == NULL then {
                 var entity: rf_named_entity = ref.get_entity();
                 if entity in dependees then {                    
                     if entity is a rf_type (rft) then {
-                        query.add_direct_dependency_on_type(me,
-                                                            rft, ref.get_source_line_num(),
-                                                            ref.get_source_module(), FALSE);
+                        query.
+                          add_direct_dependency_on_type(me,
+                                        rft, ref.get_source_line_num(),
+                                        ref.get_source_module(), FALSE);
                     } else {
-                        query.add_direct_dependency(me, entity,
-                                                    ref.get_source_line_num(),
-                                                    ref.get_source_module(), FALSE);
+                        query.
+                          add_direct_dependency(me, entity,
+                                                ref.get_source_line_num(),
+                                                ref.get_source_module(), FALSE);
                     };
                 };
             };
@@ -1068,7 +1100,8 @@ extend rf_struct_layer {
                 .struct_layer = me;
                 .method_layers = get_method_layers();
             };
-            lint_manager.method_layers_per_struct_layer_map.add(method_layers_entry);
+            lint_manager.
+              method_layers_per_struct_layer_map.add(method_layers_entry);
         };
         return method_layers_entry.method_layers;
     };
@@ -1084,7 +1117,8 @@ extend rf_struct_layer {
     
     find_dependencies_for_element(query: dependencies_query, 
                                   dependees: list of rf_structural_element, 
-                                  queried_element: rf_structural_element) is also {
+                                  queried_element: rf_structural_element)
+                                                                   is also {
         for each (intf) in get_added_interfaces() do {
             query.add_direct_dependency_on_type(queried_element, 
                                                 intf, get_source_line_num(), 
@@ -1135,9 +1169,10 @@ extend rf_interface {
                                  queried_element: rf_structural_element, 
                                  def_element: rf_definition_element) is also {
         for each (intf) in get_base_interfaces() do {
-            query.add_direct_dependency_on_type(queried_element, intf, 
-                                                def_element.get_source_line_num(), 
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, intf, 
+                                            def_element.get_source_line_num(), 
+                                            def_element.get_module(), TRUE);
         };
     };
     
@@ -1161,7 +1196,8 @@ extend rf_bfm_sequence {
 extend rf_template_instance {
     get_explicit_entities(): list of rf_named_entity is only {
         result.add(get_template());
-        for each rf_type_template_instance_parameter (param) in get_parameters() do {
+        for each rf_type_template_instance_parameter (param) 
+                                            in get_parameters() do {
             result.add(param.get_type().get_explicit_entities());
         };
     };
@@ -1170,7 +1206,8 @@ extend rf_template_instance {
 extend rf_template_interface_instance {
     get_explicit_entities(): list of rf_named_entity is only {
         result.add(get_template());
-        for each rf_type_template_instance_parameter (param) in get_parameters() do {
+        for each rf_type_template_instance_parameter (param)
+                                                 in get_parameters() do {
             result.add(param.get_type().get_explicit_entities());
         };
     };
@@ -1179,7 +1216,8 @@ extend rf_template_interface_instance {
 extend rf_template_numeric_instance {
     get_explicit_entities(): list of rf_named_entity is only {
         result.add(get_template());
-        for each rf_type_template_instance_parameter (param) in get_parameters() do {
+        for each rf_type_template_instance_parameter (param)
+                                                  in get_parameters() do {
             result.add(param.get_type().get_explicit_entities());
         };
     };
@@ -1227,9 +1265,10 @@ extend rf_template_type {
                                  queried_element: rf_structural_element,
                                  def_element: rf_definition_element) is also {
         for each rf_value_template_parameter (param) in get_parameters() do {
-            query.add_direct_dependency_on_type(queried_element,
-                                                param.get_type(), 
-                                                def_element.get_source_line_num(),
+            query.
+              add_direct_dependency_on_type(queried_element,
+                                            param.get_type(), 
+                                            def_element.get_source_line_num(),
                                                 def_element.get_module(), TRUE);
         };
     };
@@ -1242,9 +1281,10 @@ extend rf_template {
                                  def_element: rf_definition_element) is also {
         var supertype: rf_like_struct = get_supertype();
         if supertype != NULL then {
-            query.add_direct_dependency_on_type(queried_element, supertype,
-                                                def_element.get_source_line_num(), 
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, supertype,
+                                            def_element.get_source_line_num(), 
+                                            def_element.get_module(), TRUE);
         };
     };
 };
@@ -1268,16 +1308,18 @@ extend rf_method {
                                  queried_element: rf_structural_element, 
                                  def_element: rf_definition_element) is also {
         for each (param) in get_parameters() do {
-            query.add_direct_dependency_on_type(queried_element, param.get_type(),
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, param.get_type(),
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
         
         var result_type: rf_type = get_result_type();
         if result_type != NULL then {
-            query.add_direct_dependency_on_type(queried_element, result_type,
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, result_type,
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
     };
 };
@@ -1288,16 +1330,18 @@ extend rf_interface_method {
                                  queried_element: rf_structural_element, 
                                  def_element: rf_definition_element) is also {
         for each (param) in get_parameters() do {
-            query.add_direct_dependency_on_type(queried_element, param.get_type(),
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, param.get_type(),
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
         
         var result_type: rf_type = get_result_type();
         if result_type != NULL then {
-            query.add_direct_dependency_on_type(queried_element, result_type,
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, result_type,
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
     };
 };
@@ -1308,16 +1352,18 @@ extend rf_routine {
                                  queried_element: rf_structural_element,
                                  def_element: rf_definition_element) is also {
         for each (param) in get_parameters() do {
-            query.add_direct_dependency_on_type(queried_element, param.get_type(), 
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, param.get_type(), 
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
         
         var result_type: rf_type = get_result_type();
         if result_type != NULL then {
-            query.add_direct_dependency_on_type(queried_element, result_type, 
-                                                def_element.get_source_line_num(),
-                                                def_element.get_module(), TRUE);
+            query.
+              add_direct_dependency_on_type(queried_element, result_type, 
+                                            def_element.get_source_line_num(),
+                                            def_element.get_module(), TRUE);
         };
     };
 };
