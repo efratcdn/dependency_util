@@ -616,9 +616,11 @@ struct dependencies_query like base_struct {
                     the_list.add(module);
                 } else if pattern ~ "/\*/" then {
                     for each (module) in rf_manager.get_user_modules() do {
-                        if (module.get_name() ~ pattern) or
-                          (append(module.get_name(), ".e") ~ pattern) then {
-                            the_list.add(module);
+                        if (module.get_name() != "e_util_dependency_util") {
+                            if (module.get_name() ~ pattern) or
+                              (append(module.get_name(), ".e") ~ pattern) then {
+                                the_list.add(module);
+                            };
                         };
                     };
                 };
@@ -630,8 +632,11 @@ struct dependencies_query like base_struct {
                     the_list.add(rft);
                 } else if pattern ~ "/\*/" then {
                     for each (rft) in rf_manager.get_user_types() do {
-                        if rft.get_name() ~ pattern then {
-                            the_list.add(rft);
+                        if rft.get_package().get_name() !=
+                          "e_util_dependency_util" {
+                            if rft.get_name() ~ pattern then {
+                                the_list.add(rft);
+                            };
                         };
                     };
                 };
