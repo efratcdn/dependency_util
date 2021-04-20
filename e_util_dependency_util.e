@@ -3,8 +3,8 @@ File name     : e_util_dependency_util.e
 Title         : Dependency Util
 Project       : Utilities
 Created       : 2020
-Description   : Static analysis of the environment, finding dependencies
-              : between elements (directories, modules, types)
+Description   : Static analysis of the environment, finding dependencies between
+              : elements (directories, modules, types)
               :
               : See details below
               :
@@ -593,6 +593,7 @@ struct dependencies_query like base_struct {
         return query.execute();
     };
 
+    
     static add_elements_by_kind_and_pattern_to_list(
                           kind: element_kind,
                           pattern: string, 
@@ -613,10 +614,12 @@ struct dependencies_query like base_struct {
             module: {
                 var module: rf_module = rf_manager.get_module_by_name(pattern);
                 if module != NULL then {
-                    the_list.add(module);
+                    if module.get_name() !=  "e_util_dependency_util" {
+                        the_list.add(module);
+                    };
                 } else if pattern ~ "/\*/" then {
                     for each (module) in rf_manager.get_user_modules() do {
-                        if (module.get_name() != "e_util_dependency_util") {
+                        if module.get_name() !=  "e_util_dependency_util" {
                             if (module.get_name() ~ pattern) or
                               (append(module.get_name(), ".e") ~ pattern) then {
                                 the_list.add(module);
@@ -629,14 +632,16 @@ struct dependencies_query like base_struct {
             type: {
                 var rft: rf_type = rf_manager.get_type_by_name(pattern);
                 if rft != NULL then {
-                    the_list.add(rft);
+                    if rft.get_declaration_module().get_name() !=
+                      "e_util_dependency_util" {
+                        the_list.add(rft);
+                    };
                 } else if pattern ~ "/\*/" then {
                     for each (rft) in rf_manager.get_user_types() do {
-                        if rft.get_package().get_name() !=
-                          "e_util_dependency_util" {
-                            if rft.get_name() ~ pattern then {
-                                the_list.add(rft);
-                            };
+                        if (rft.get_name() ~ pattern) and
+                          (rft.get_declaration_module().get_name() !=
+                           "e_util_dependency_util") then {
+                            the_list.add(rft);
                         };
                     };
                 };
@@ -660,6 +665,23 @@ struct dependencies_query like base_struct {
                                             first_module_name: string = "",
                                             last_module_name: string = ""): 
                                                 list of dependency_info is {
+        
+        if not element_exists(dependent_kind, dependent_pattern, FALSE) {
+            return {};
+        };
+        if not element_exists(dependee_kind, dependee_pattern, FALSE) {
+            return {};
+        };
+        if first_module_name != "" and
+          not element_exists(module, first_module_name, TRUE) {
+            return {};
+        };
+        if last_module_name != "" and
+          not element_exists(module, last_module_name, TRUE) {
+            return {};
+        };
+        
+          
         var main_dependents: list of dependency_element;
         add_elements_by_kind_and_pattern_to_list(dependent_kind, 
                                                  dependent_pattern,
@@ -726,6 +748,56 @@ struct dependencies_query like base_struct {
         return started_with_interesting;
     };
     
+    static element_exists( kind  : element_kind,
+                           name  : string,
+                           exact : bool) : bool is {
+        if kind == module {
+            if rf_manager.get_module_by_name(name) != NULL {
+                return (TRUE);
+            };
+            
+            // if name contains '*', look for module mathcin this pattern
+            if not exact
+              and name ~ "/\*/" then {
+                var all_modules := rf_manager.get_user_modules();
+                for each (module) in all_modules do {
+                    if (module.get_name() ~ name) or
+                      (append(module.get_name(), ".e") ~ name) {
+                        return(TRUE);
+                    };
+                };
+                // no such type found
+                out("Warning: No module name matches ",
+                    name );
+            } else {
+                out("Warning: No module named ", name );
+                return (FALSE);
+            };
+        };
+        
+        if kind == type {
+            var user_type := rf_manager.get_type_by_name(name);
+            if user_type != NULL {
+                return (TRUE);
+            };
+            // if name contains '*', look for module mathcin this pattern
+            if name ~ "/\*/" then {
+                for each (rft) in rf_manager.get_user_types() do {
+                    if (rft.get_name() ~ name) {
+                        return (TRUE);
+                    };
+                };
+                // no such type found
+                out("Warning: No type name matches ",
+                    name );
+                return (FALSE);
+            } else {
+                out("Warning: No type named ", name );
+                return (FALSE);
+            };
+        };
+    };
+    
     // find_module_dependencies_recursively()
     //
     //  Looks for all the modules that <moduule_name> depends on, including 
@@ -739,7 +811,20 @@ struct dependencies_query like base_struct {
         first_module_name: string = "", 
         last_module_name: string = ""): 
       list (key: the_module) of module_dependencies is {
-      
+            
+        if not element_exists(module, dependent_module_pattern, FALSE) {
+            return {};
+        };
+        if first_module_name != "" and
+          not element_exists(module, first_module_name, TRUE) {
+            return {};
+        };
+        if last_module_name != "" and
+          not element_exists(module, last_module_name, TRUE) {
+            return {};
+        };
+                             
+        
         var all_modules: list of rf_module =
           get_interesting_modules(first_module_name, last_module_name);
         set_interesting();
@@ -790,6 +875,7 @@ struct dependencies_query like base_struct {
 
     static print_dependencies(deps: list of dependency_info, 
                               detailed: bool) is {
+        
         if deps.is_empty() then {
             out("No dependencies were found");
             return;
@@ -864,6 +950,7 @@ struct dependencies_query like base_struct {
                                              detailed: bool,
                                              first_module_name: string = "",
                                              last_module_name: string = "") is {
+        
         var all_deps: list of dependency_info = 
           find_all_dependencies_by_pattern(dependent_kind, dependent_pattern, 
                                            dependee_kind, dependee_pattern, 
@@ -991,9 +1078,10 @@ extend rf_definition_element {
                                   dependees: list of rf_structural_element,
                                   queried_element: rf_structural_element) is {
         for each (ref) in lint_manager.
-                    get_all_entity_references_in_context(me) do {
+                    get_all_entity_references_in_context(me) do {            
             var entity: rf_named_entity = ref.get_entity();
             if entity in dependees then {
+                
                 query.add_direct_dependency(queried_element, entity, 
                                             ref.get_source_line_num(),
                                             ref.get_source_module(), FALSE);
