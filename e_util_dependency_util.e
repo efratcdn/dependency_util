@@ -1233,8 +1233,10 @@ extend rf_structural_element implementing dependency_element {
             result.add(me);
             if with_entities and me is a rf_definition_element (rde) {
                 ne = rde.get_defined_entity();
-                if sys.is_interesting_entity(ne)  {
-                    result.add(ne);
+		if ne != NULL {
+                    if sys.is_interesting_entity(ne)  {
+                        result.add(ne);
+	            };
                 };
             };
         };
